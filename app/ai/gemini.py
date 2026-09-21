@@ -11,6 +11,10 @@ from app.config import settings
 logger = logging.getLogger(__name__)
 
 
+class OpenRouterResponseError(RuntimeError):
+    pass
+
+
 class OpenRouterService:
     def __init__(self) -> None:
         self._conversations: dict[int, list[dict[str, Any]]] = defaultdict(list)
@@ -48,11 +52,25 @@ class OpenRouterService:
                 timeout=90,
             )
             response.raise_for_status()
-            return response.json()["choices"][0]["message"]
+            response_data = response.json()
+            if response_data.get("error"):
+                error = response_data["error"]
+                message = error.get("message", "The provider returned an error") if isinstance(error, dict) else str(error)
+                raise OpenRouterResponseError(message)
+            choices = response_data.get("choices")
+            if not choices or not isinstance(choices[0], dict) or not isinstance(choices[0].get("message"), dict):
+                raise OpenRouterResponseError("The provider returned no assistant message")
+            return choices[0]["message"]
 
         try:
             message = await asyncio.to_thread(generate)
-        except (requests.RequestException, KeyError, IndexError, TypeError, ValueError):
+        except OpenRouterResponseError as exc:
+            logger.error("OpenRouter returned an error: %s", exc)
+            return "The AI service returned an error. Please try again shortly."
+        except requests.HTTPError as exc:
+            logger.error("OpenRouter HTTP error: %s", exc.response.status_code if exc.response else "unknown")
+            return "The AI service returned an error. Please try again shortly."
+        except (requests.RequestException, TypeError, ValueError):
             logger.exception("OpenRouter request failed")
             return "I couldn't reach the AI service right now. Please try again in a few minutes."
 
