@@ -10,7 +10,7 @@ This private Telegram assistant provides OpenRouter-backed questions, persistent
 4. Start the bot with `python -m app.telegram.bot`.
 5. Start the health service with `uvicorn app.main:app --reload` and verify `GET /health`.
 
-The default local database is SQLite. Set `DATABASE_URL` to a PostgreSQL SQLAlchemy URL for Heroku Postgres.
+The default local database can be SQLite, but Heroku must use the PostgreSQL `DATABASE_URL` supplied by the Heroku Postgres add-on. OAuth state and Gmail credentials require persistent storage; do not deploy Heroku with `sqlite:///./assistant.db`.
 
 ## OpenRouter models
 

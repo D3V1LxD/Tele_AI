@@ -1,7 +1,7 @@
 from fastapi import FastAPI, Query
 from fastapi.responses import HTMLResponse
 
-from app.database import SessionLocal, init_database
+from app.database import SessionLocal, database_url, init_database
 from app.gmail import complete_authorization
 
 app = FastAPI(title="Personal AI Telegram Assistant")
@@ -14,7 +14,10 @@ def startup() -> None:
 
 @app.get("/health")
 def health() -> dict[str, str]:
-    return {"status": "ok"}
+    return {
+        "status": "ok",
+        "database": "postgresql" if database_url.startswith("postgresql") else "sqlite",
+    }
 
 
 @app.get("/")
